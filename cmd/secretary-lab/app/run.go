@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/chez-shanpu/secretary/constants"
 	"github.com/chez-shanpu/secretary/pkg/slack"
 
-	"github.com/chez-shanpu/secretary/constants"
-
 	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -47,15 +47,18 @@ func init() {
 	_ = viper.BindEnv("LAB_DB_NAME")
 	_ = viper.BindEnv("LAB_SLACK_TOKEN")
 	_ = viper.BindEnv("LAB_SLACK_CHANNEL")
+	_ = viper.BindEnv("LAB_SLACK_COMING_CHANNEL")
 
 	// required
 	_ = runCmd.MarkFlagRequired("config-path")
 }
 
 func runServer(cmd *cobra.Command, args []string) {
+	var err error
+
 	// db
 	dataSrcName := fmt.Sprintf("%s:%s@/%s", viper.Get("LAB_DB_USER"), viper.Get("LAB_DB_PASSWORD"), viper.Get("LAB_DB_NAME"))
-	db, err := sqlx.Open("mysql", dataSrcName)
+	db, err = sqlx.Open("mysql", dataSrcName)
 	if err != nil {
 		log.Fatalf("[ERROR] sqlx.open: %s", err)
 	}
@@ -74,11 +77,16 @@ func runServer(cmd *cobra.Command, args []string) {
 	r.GET("/status", getStatus)
 	r.POST("/event", postEvent)
 
-	r.Run()
+	r.Run(":8080")
 }
 
 func getStatus(c *gin.Context) {
 	username := c.Query("name")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "please input name parameter"})
+		return
+	}
+
 	status, err := getCurrentStatus(username)
 	if err != nil {
 		log.Printf("[ERROR] getCurrentStatus db GET: %s", err)
@@ -126,7 +134,10 @@ func postEvent(c *gin.Context) {
 		wg.Done()
 	}(req.Username, nowStatus)
 	go func(u, s string) {
-		sendMessage(u, s)
+		err := sendMessage(u, s)
+		if err != nil {
+			log.Printf("[ERROR] sendMessage: %s", err)
+		}
 		wg.Done()
 	}(req.Username, nowStatus)
 	wg.Wait()
@@ -147,14 +158,25 @@ func sendMessage(username, status string) error {
 		return err
 	}
 	if status == constants.LabEventCome {
-		msgStr = fmt.Sprintf("おかえりなさいませ，%s様！ \n今日も一日頑張りましょう！", slackUsername)
+		msgStr = fmt.Sprintf("おかえりなさいませ，@%s様！ \n今日も一日頑張りましょう！", slackUsername)
 	} else {
-		msgStr = fmt.Sprintf("お疲れ様でした，%s様！ \n帰り道気をつけてくださいね！", slackUsername)
+		msgStr = fmt.Sprintf("お疲れ様でした，@%s様！ \n帰り道気をつけてくださいね！", slackUsername)
 	}
 
 	token := viper.GetString("LAB_SLACK_TOKEN")
 	ch := viper.GetString("LAB_SLACK_CHANNEL")
 	mi := slack.NewSlackMessageInfo(token, ch, msgStr)
+	err = mi.PostMessage()
+	if err != nil {
+		return err
+	}
+
+	if status != constants.LabEventCome {
+		return nil
+	}
+	msgStr = fmt.Sprintf("@%s様がいらっしゃいました．", slackUsername)
+	ch = viper.GetString("LAB_SLACK_COMING_CHANNEL")
+	mi = slack.NewSlackMessageInfo(token, ch, msgStr)
 	err = mi.PostMessage()
 	return err
 }
@@ -162,7 +184,7 @@ func sendMessage(username, status string) error {
 func getCurrentStatus(username string) (string, error) {
 	var todayEventNum int
 
-	err := db.Get(&todayEventNum, "SELECT count(*) FROM lab_event WHERE username=? created_at > CURRENT_DATE", username)
+	err := db.Get(&todayEventNum, "SELECT count(*) FROM lab_events WHERE username=? AND created_at > CURRENT_DATE", username)
 	if err != nil {
 		return "", err
 	}
@@ -177,7 +199,7 @@ func getCurrentStatus(username string) (string, error) {
 func convertSlackUsername(name string) (string, error) {
 	configPath := viper.Get("secretary.lab.config")
 	path, fileName := filepath.Split(configPath.(string))
-	fileNameExt := filepath.Ext(path)
+	fileNameExt := filepath.Ext(fileName)
 	fileName = fileName[0 : len(fileName)-len(fileNameExt)]
 
 	viper.SetConfigName(fileName)
