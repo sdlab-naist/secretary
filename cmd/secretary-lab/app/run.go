@@ -8,11 +8,12 @@ import (
 	"sync"
 
 	"github.com/chez-shanpu/secretary/constants"
-	"github.com/chez-shanpu/secretary/pkg/slack"
+	myslack "github.com/chez-shanpu/secretary/pkg/slack"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -157,6 +158,7 @@ func sendMessage(username, status string) error {
 	if err != nil {
 		return err
 	}
+
 	if status == constants.LabEventCome {
 		msgStr = fmt.Sprintf("おかえりなさいませ，@%s様！ \n今日も一日頑張りましょう！", slackUsername)
 	} else {
@@ -165,7 +167,7 @@ func sendMessage(username, status string) error {
 
 	token := viper.GetString("LAB_SLACK_TOKEN")
 	ch := viper.GetString("LAB_SLACK_CHANNEL")
-	mi := slack.NewSlackMessageInfo(token, ch, msgStr)
+	mi := myslack.NewSlackMessageInfo(token, ch, msgStr)
 	err = mi.PostMessage()
 	if err != nil {
 		return err
@@ -176,7 +178,7 @@ func sendMessage(username, status string) error {
 	}
 	msgStr = fmt.Sprintf("@%s様がいらっしゃいました．", slackUsername)
 	ch = viper.GetString("LAB_SLACK_COMING_CHANNEL")
-	mi = slack.NewSlackMessageInfo(token, ch, msgStr)
+	mi = myslack.NewSlackMessageInfo(token, ch, msgStr)
 	err = mi.PostMessage()
 	return err
 }
@@ -209,11 +211,16 @@ func convertSlackUsername(name string) (string, error) {
 		return "", err
 	}
 	nameMap := viper.Get("name").(map[string]interface{})
-	slackName, ok := nameMap[name]
-	if ok {
-		return slackName.(string), nil
-	} else {
+	slackUserID, ok := nameMap[name].(string)
+	if !ok {
 		return name, nil
 	}
 
+	token := viper.GetString("LAB_SLACK_TOKEN")
+	api := slack.New(token)
+	u, err := api.GetUserInfo(slackUserID)
+	if err != nil {
+		return "", err
+	}
+	return u.Profile.DisplayName, nil
 }
