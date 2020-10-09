@@ -1,4 +1,4 @@
-name: docker_build
+name: docker_latest_build
 on:
   push:
     branches:
@@ -31,4 +31,4 @@ jobs:
         push: true
         tags: |
           ghcr.io/${{ github.repository_owner }}/secretary-lab:latest
-          ghcr.io/${{ github.repository_owner }}/secretary-lab:${GITHUB_REF#refs/tags/}
+          ghcr.io/${{ github.repository_owner }}/secretary-lab:${{ github.sha }}

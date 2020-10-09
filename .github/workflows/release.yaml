@@ -38,6 +38,12 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.CR_PAT }}
 
+    - name: Prepare for image tag
+      id: prep
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo ::set-output name=version::${VERSION}
+
     - name: Build and push secretary-lab
       uses: docker/build-push-action@v2
       with:
@@ -46,5 +52,5 @@ jobs:
         push: true
         tags: |
           ghcr.io/${{ github.repository_owner }}/secretary-lab:stable
-          ghcr.io/${{ github.repository_owner }}/secretary-lab:${GITHUB_REF#refs/tags/}
+          ghcr.io/${{ github.repository_owner }}/secretary-lab:${{ steps.prep.outputs.version }}
 
