@@ -3,7 +3,7 @@ builds:
   dir: ./cmd/secretary-lab/
   binary: secreatary-lab
   ldflags:
-  -X github.com/chez-shanpu/secretary/cmd/secretary-lab/app.Version={{.Version}} -X github.com/chez-shanpu/secretary/cmd/secretary-lab/app.Revision={{.ShortCommit}}
+  - -X github.com/chez-shanpu/secretary/cmd/secretary-lab/app.Version={{.Version}} -X github.com/chez-shanpu/secretary/cmd/secretary-lab/app.Revision={{.ShortCommit}}
   goos:
   - linux
   - darwin
