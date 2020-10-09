@@ -33,18 +33,18 @@ jobs:
 
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.CR_PAT }}
 
     - name: Build and push secretary-lab
       uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./docker/secretary-lab/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/secretary-lab:stable
-            ghcr.io/${{ github.repository_owner }}/secretary-lab:${GITHUB_REF#refs/tags/}
+      with:
+        context: .
+        file: ./docker/secretary-lab/Dockerfile
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/secretary-lab:stable
+          ghcr.io/${{ github.repository_owner }}/secretary-lab:${GITHUB_REF#refs/tags/}
 
