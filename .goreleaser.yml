@@ -1,0 +1,12 @@
+builds:
+- id: "secretary-lab"
+  dir: ./cmd/secretary-lab/
+  binary: repotr
+  goos:
+  - linux
+  - darwin
+  - windows
+  goarch:
+  - amd64
+  - arm
+  - arm64
