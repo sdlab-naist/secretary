@@ -1,7 +1,9 @@
 builds:
 - id: "secretary-lab"
   dir: ./cmd/secretary-lab/
-  binary: repotr
+  binary: secreatary-lab
+  ldflags:
+  -X github.com/chez-shanpu/secretary/cmd/secretary-lab/app.Version={{.Version}} -X github.com/chez-shanpu/secretary/cmd/secretary-lab/app.Revision={{.ShortCommit}}
   goos:
   - linux
   - darwin

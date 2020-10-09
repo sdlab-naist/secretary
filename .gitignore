@@ -16,4 +16,8 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+# Option
 .idea
+.env
+cmd/secretary-lab/config.yaml
+bin
