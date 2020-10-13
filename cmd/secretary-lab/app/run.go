@@ -13,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	"github.com/slack-go/slack"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -154,15 +153,15 @@ func regesterEvent(username, status string) error {
 
 func sendMessage(username, status string) error {
 	var msgStr string
-	slackUsername, err := convertSlackUsername(username)
+	slackUserID, err := getSlackUserID(username)
 	if err != nil {
 		return err
 	}
 
 	if status == constants.LabEventCome {
-		msgStr = fmt.Sprintf("おかえりなさいませ，@%s様！ \n今日も一日頑張りましょう！", slackUsername)
+		msgStr = fmt.Sprintf("おかえりなさい，<@%s>くん \n今日も一日頑張りましょう！", slackUserID)
 	} else {
-		msgStr = fmt.Sprintf("お疲れ様でした，@%s様！ \n帰り道気をつけてくださいね！", slackUsername)
+		msgStr = fmt.Sprintf("お疲れさまでした，<@%s>くん \n帰り道気をつけてくださいね！", slackUserID)
 	}
 
 	token := viper.GetString("LAB_SLACK_TOKEN")
@@ -176,7 +175,7 @@ func sendMessage(username, status string) error {
 	if status != constants.LabEventCome {
 		return nil
 	}
-	msgStr = fmt.Sprintf("@%s様がいらっしゃいました．", slackUsername)
+	msgStr = fmt.Sprintf("<@%s>くんが来ました．", slackUserID)
 	ch = viper.GetString("LAB_SLACK_COMING_CHANNEL")
 	mi = myslack.NewSlackMessageInfo(token, ch, msgStr)
 	err = mi.PostMessage()
@@ -198,7 +197,7 @@ func getCurrentStatus(username string) (string, error) {
 	}
 }
 
-func convertSlackUsername(name string) (string, error) {
+func getSlackUserID(name string) (string, error) {
 	configPath := viper.Get("secretary.lab.config")
 	path, fileName := filepath.Split(configPath.(string))
 	fileNameExt := filepath.Ext(fileName)
@@ -216,11 +215,5 @@ func convertSlackUsername(name string) (string, error) {
 		return name, nil
 	}
 
-	token := viper.GetString("LAB_SLACK_TOKEN")
-	api := slack.New(token)
-	u, err := api.GetUserInfo(slackUserID)
-	if err != nil {
-		return "", err
-	}
-	return u.Profile.DisplayName, nil
+	return slackUserID, nil
 }
