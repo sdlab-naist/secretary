@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/chez-shanpu/secretary/pkg/user"
 
@@ -47,6 +48,8 @@ func init() {
 	// bind env vars
 	_ = viper.BindEnv("LAB_DB_USER")
 	_ = viper.BindEnv("LAB_DB_PASSWORD")
+	_ = viper.BindEnv("LAB_DB_PROTOCOL")
+	_ = viper.BindEnv("LAB_DB_ADDR")
 	_ = viper.BindEnv("LAB_DB_NAME")
 	_ = viper.BindEnv("LAB_SLACK_TOKEN")
 	_ = viper.BindEnv("LAB_SLACK_COMING_CHANNEL")
@@ -59,15 +62,26 @@ func runServer(cmd *cobra.Command, args []string) {
 	var err error
 
 	// db
-	dataSrcName := fmt.Sprintf("%s:%s@/%s", viper.Get("LAB_DB_USER"), viper.Get("LAB_DB_PASSWORD"), viper.Get("LAB_DB_NAME"))
+	dataSrcName := fmt.Sprintf("%s:%s@%s(%s)/%s",
+		viper.Get("LAB_DB_USER"),
+		viper.Get("LAB_DB_PASSWORD"),
+		viper.Get("LAB_DB_PROTOCOL"),
+		viper.Get("LAB_DB_ADDR"),
+		viper.Get("LAB_DB_NAME"))
 	db, err = sqlx.Open("mysql", dataSrcName)
 	if err != nil {
 		log.Fatalf("[ERROR] sqlx.open: %s", err)
 	}
-	err = db.Ping()
-	if err != nil {
-		log.Fatalf("[ERROR] db.Ping: %s", err)
+	for {
+		err = db.Ping()
+		if err != nil {
+			log.Printf("[Info] db.Ping: %s", err)
+			time.Sleep(5 * time.Second)
+		} else {
+			break
+		}
 	}
+
 	defer db.Close()
 
 	r := gin.Default()

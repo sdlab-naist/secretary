@@ -2,13 +2,21 @@ version: '3'
 
 services:
   secretary-lab:
-    image: ghcr.io/chez-shanpu/secretary-lab:stable
+    image: ghcr.io/chez-shanpu/secretary-lab:latest
+    #    build:
+    #      dockerfile: ./docker/secretary-lab/Dockerfile
+    #      context: .
     environment:
       LAB_DB_USER: sample
       LAB_DB_PASSWORD: sample
       LAB_DB_NAME: sample
       LAB_SLACK_TOKEN: sample
       LAB_SLACK_COMING_CHANNEL: sample
+      GIN_MODE: release
+    volumes:
+    - ./config.yaml:/config.yaml
+    entrypoint: [ "/secretary-lab" ]
+    command: [ "run", "-p", "./config.yaml" ]
     ports:
     - "8080:8080"
 
