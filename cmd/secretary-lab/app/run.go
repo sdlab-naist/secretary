@@ -1,11 +1,14 @@
 package app
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net/http"
-	"path/filepath"
 	"sync"
+	"text/template"
+
+	"github.com/chez-shanpu/secretary/pkg/user"
 
 	"github.com/chez-shanpu/secretary/constants"
 	myslack "github.com/chez-shanpu/secretary/pkg/slack"
@@ -46,7 +49,6 @@ func init() {
 	_ = viper.BindEnv("LAB_DB_PASSWORD")
 	_ = viper.BindEnv("LAB_DB_NAME")
 	_ = viper.BindEnv("LAB_SLACK_TOKEN")
-	_ = viper.BindEnv("LAB_SLACK_CHANNEL")
 	_ = viper.BindEnv("LAB_SLACK_COMING_CHANNEL")
 
 	// required
@@ -129,7 +131,7 @@ func postEvent(c *gin.Context) {
 	go func(u, s string) {
 		err := regesterEvent(u, s)
 		if err != nil {
-			log.Printf("[ERROR] resterEvent: %s", err)
+			log.Printf("[ERROR] regesterEvent: %s", err)
 		}
 		wg.Done()
 	}(req.Username, nowStatus)
@@ -153,20 +155,35 @@ func regesterEvent(username, status string) error {
 
 func sendMessage(username, status string) error {
 	var msgStr string
-	slackUserID, err := getSlackUserID(username)
+	u, err := user.GetUser(viper.GetString("secretary.lab.config"), username)
 	if err != nil {
 		return err
 	}
 
+	var t *template.Template
 	if status == constants.LabEventCome {
-		msgStr = fmt.Sprintf("おかえりなさい，<@%s>くん \n今日も一日頑張りましょう！", slackUserID)
+		tmpl := u.SecretaryComingMsg
+		t, err = template.New("coming").Parse(tmpl)
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else {
-		msgStr = fmt.Sprintf("お疲れさまでした，<@%s>くん \n帰り道気をつけてくださいね！", slackUserID)
+		tmpl := u.SecretaryGoodbyeMsg
+		t, err = template.New("goodbye").Parse(tmpl)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
+	buf := new(bytes.Buffer)
+	if err = t.Execute(buf, u); err != nil {
+		log.Fatal(err)
+	}
+	msgStr = buf.String()
+
 	token := viper.GetString("LAB_SLACK_TOKEN")
-	ch := viper.GetString("LAB_SLACK_CHANNEL")
-	mi := myslack.NewSlackMessageInfo(token, ch, msgStr)
+	ch := u.SlackChannel
+	mi := myslack.NewSlackMessageInfo(token, ch, u.SecretaryName, u.SecretaryIcon, msgStr)
 	err = mi.PostMessage()
 	if err != nil {
 		return err
@@ -175,9 +192,9 @@ func sendMessage(username, status string) error {
 	if status != constants.LabEventCome {
 		return nil
 	}
-	msgStr = fmt.Sprintf("<@%s>くんが来ました．", slackUserID)
+	msgStr = fmt.Sprintf("<@%s>くんが来ました．", u.SlackId)
 	ch = viper.GetString("LAB_SLACK_COMING_CHANNEL")
-	mi = myslack.NewSlackMessageInfo(token, ch, msgStr)
+	mi = myslack.NewSlackMessageInfo(token, ch, u.SecretaryName, u.SecretaryIcon, msgStr)
 	err = mi.PostMessage()
 	return err
 }
@@ -195,25 +212,4 @@ func getCurrentStatus(username string) (string, error) {
 	} else {
 		return constants.LabEventCome, nil
 	}
-}
-
-func getSlackUserID(name string) (string, error) {
-	configPath := viper.Get("secretary.lab.config")
-	path, fileName := filepath.Split(configPath.(string))
-	fileNameExt := filepath.Ext(fileName)
-	fileName = fileName[0 : len(fileName)-len(fileNameExt)]
-
-	viper.SetConfigName(fileName)
-	viper.AddConfigPath(path)
-	err := viper.ReadInConfig()
-	if err != nil {
-		return "", err
-	}
-	nameMap := viper.Get("name").(map[string]interface{})
-	slackUserID, ok := nameMap[name].(string)
-	if !ok {
-		return name, nil
-	}
-
-	return slackUserID, nil
 }
