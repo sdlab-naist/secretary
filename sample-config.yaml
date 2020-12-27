@@ -1,0 +1,11 @@
+users:
+  your_name:
+    slack_id: "hoge"
+    slack_channel: "hoge"
+    secretary_name: "hoge"
+    secretary_icon: "hoge"
+    secretary_comming_msg: "hoge"
+    secretary_goodbye_msg: "hoge"
+
+#name:
+#  username: slack_user_id

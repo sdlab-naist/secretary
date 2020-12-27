@@ -19,5 +19,5 @@
 # Option
 .idea
 .env
-cmd/secretary-lab/config.yaml
+config.yaml
 bin

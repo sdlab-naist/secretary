@@ -14,10 +14,12 @@ type MessageInfo struct {
 	Message   string
 }
 
-func NewSlackMessageInfo(token, channelId, message string) *MessageInfo {
+func NewSlackMessageInfo(token, channelId, userName, iconEmoji, message string) *MessageInfo {
 	return &MessageInfo{
 		Api:       *slack.New(token),
 		ChannelID: channelId,
+		UserName:  userName,
+		IconEmoji: iconEmoji,
 		Message:   message,
 	}
 }
@@ -26,6 +28,8 @@ func (i *MessageInfo) PostMessage() error {
 	if _, _, err := i.Api.PostMessage(
 		i.ChannelID,
 		slack.MsgOptionText(i.Message, false),
+		slack.MsgOptionIconEmoji(i.IconEmoji),
+		slack.MsgOptionUsername(i.UserName),
 	); err != nil {
 		return err
 	}

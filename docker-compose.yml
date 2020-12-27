@@ -8,7 +8,6 @@ services:
       LAB_DB_PASSWORD: sample
       LAB_DB_NAME: sample
       LAB_SLACK_TOKEN: sample
-      LAB_SLACK_CHANNEL: sample
       LAB_SLACK_COMING_CHANNEL: sample
     ports:
     - "8080:8080"
