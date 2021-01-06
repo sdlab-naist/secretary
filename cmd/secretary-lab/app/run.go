@@ -196,13 +196,17 @@ func sendMessage(username, status string) error {
 	msgStr = buf.String()
 
 	token := viper.GetString("LAB_SLACK_TOKEN")
-	ch := u.SlackChannel
-	mi := myslack.NewSlackMessageInfo(token, ch, u.SecretaryName, u.SecretaryIcon, msgStr)
-	err = mi.PostMessage()
-	if err != nil {
-		return err
-	}
 
+	var ch string
+	var mi *myslack.MessageInfo
+	if u.SlackChannel != "nil" {
+		ch = u.SlackChannel
+		mi = myslack.NewSlackMessageInfo(token, ch, u.SecretaryName, u.SecretaryIcon, msgStr)
+		err = mi.PostMessage()
+		if err != nil {
+			return err
+		}
+	}
 	if status != constants.LabEventCome {
 		return nil
 	}
