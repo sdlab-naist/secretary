@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"text/template"
 	"time"
@@ -71,6 +72,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	db, err = sqlx.Open("mysql", dataSrcName)
 	if err != nil {
 		log.Fatalf("[ERROR] sqlx.open: %s", err)
+		return
 	}
 	for {
 		err = db.Ping()
@@ -83,6 +85,14 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 
 	defer db.Close()
+
+	configPath := viper.GetString("secretary.lab.config")
+	path, fileName := filepath.Split(configPath)
+	fileNameExt := filepath.Ext(fileName)
+	fileName = fileName[0 : len(fileName)-len(fileNameExt)]
+	viper.SetConfigName(fileName)
+	viper.AddConfigPath(path)
+	viper.WatchConfig()
 
 	r := gin.Default()
 	r.GET("/ping", func(c *gin.Context) {
@@ -169,7 +179,8 @@ func regesterEvent(username, status string) error {
 
 func sendMessage(username, status string) error {
 	var msgStr string
-	u, err := user.GetUser(viper.GetString("secretary.lab.config"), username)
+
+	u, err := user.GetUser(username)
 	if err != nil {
 		return err
 	}

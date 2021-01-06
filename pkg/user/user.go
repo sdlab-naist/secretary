@@ -2,7 +2,6 @@ package user
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/spf13/viper"
 )
@@ -17,18 +16,8 @@ type User struct {
 	SecretaryGoodbyeMsg string
 }
 
-func GetUser(configPath, name string) (*User, error) {
-	path, fileName := filepath.Split(configPath)
-	fileNameExt := filepath.Ext(fileName)
-	fileName = fileName[0 : len(fileName)-len(fileNameExt)]
-
-	viper.SetConfigName(fileName)
-	viper.AddConfigPath(path)
-	err := viper.ReadInConfig()
-
-	if err != nil {
-		return nil, err
-	}
+func GetUser(name string) (*User, error) {
+	//TODO このviper.getの部分，cmd/secretary-lab/app/run.goに依存してるのよくない
 	users := viper.Get("users").(map[string]interface{})
 	uInfo, ok := users[name].(map[string]interface{})
 	if !ok {
