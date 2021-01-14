@@ -92,6 +92,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	fileName = fileName[0 : len(fileName)-len(fileNameExt)]
 	viper.SetConfigName(fileName)
 	viper.AddConfigPath(path)
+	viper.ReadInConfig()
 	viper.WatchConfig()
 
 	r := gin.Default()
