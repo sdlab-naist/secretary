@@ -175,10 +175,25 @@ func postEvent(c *gin.Context) {
 }
 
 func registerEvent(username, status string) error {
-	// To-do: Implement the logic that prevents double registration for same user on the same day
+
 	res, err := db.Exec("INSERT INTO lab_events (`username`, `event_type`) VALUES (?,?)", username, status)
-	log.Printf("[INFO] regesterEvent query reseult: %s", res)
+	log.Printf("[INFO] registerEvent query reseult: %s", res)
 	return err
+}
+
+func alreadyCheckinOrNot(username string) (bool, error) {
+	var todayRegisteredCount int
+	err := db.Get(&todayRegisteredCount, "SELECT count(*) FROM lab_events WHERE username=? AND created_at > CURRENT_DATE", username)
+	if err != nil {
+		log.Printf("[ERROR] alreadyCheckinOrNot: no username found")
+		return false, err
+	}
+	if todayRegisteredCount > 0 {
+		// Return true if the user has checked in today
+		return true, nil
+	}
+	// Return false if the user has not checked in today
+	return false, nil
 }
 
 func sendMessage(username, status string) error {
