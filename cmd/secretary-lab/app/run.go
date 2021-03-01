@@ -10,13 +10,11 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/chez-shanpu/secretary/pkg/user"
-
 	"github.com/chez-shanpu/secretary/constants"
 	myslack "github.com/chez-shanpu/secretary/pkg/slack"
+	"github.com/chez-shanpu/secretary/pkg/user"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,6 +30,7 @@ var runCmd = &cobra.Command{
 
 var db *sqlx.DB
 
+// ReqStatus returns the status of dB request
 type ReqStatus struct {
 	Username string `json:"name" binding:"required"`
 }
@@ -109,11 +108,14 @@ func runServer(cmd *cobra.Command, args []string) {
 
 func getStatus(c *gin.Context) {
 	username := c.Query("name")
+
+	// If username is empty
 	if username == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "please input name parameter"})
 		return
 	}
 
+	// Get the status (has come or has left the lab)
 	status, err := getCurrentStatus(username)
 	if err != nil {
 		log.Printf("[ERROR] getCurrentStatus db GET: %s", err)
@@ -154,7 +156,7 @@ func postEvent(c *gin.Context) {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	go func(u, s string) {
-		err := regesterEvent(u, s)
+		err := registerEvent(u, s)
 		if err != nil {
 			log.Printf("[ERROR] regesterEvent: %s", err)
 		}
@@ -172,7 +174,8 @@ func postEvent(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func regesterEvent(username, status string) error {
+func registerEvent(username, status string) error {
+	// To-do: Implement the logic that prevents double registration for same user on the same day
 	res, err := db.Exec("INSERT INTO lab_events (`username`, `event_type`) VALUES (?,?)", username, status)
 	log.Printf("[INFO] regesterEvent query reseult: %s", res)
 	return err
@@ -236,10 +239,9 @@ func getCurrentStatus(username string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	if todayEventNum%2 == 0 {
 		return constants.LabEventLeave, nil
-	} else {
-		return constants.LabEventCome, nil
 	}
+	return constants.LabEventCome, nil
+
 }

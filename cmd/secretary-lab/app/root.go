@@ -9,13 +9,16 @@ import (
 )
 
 var (
-	// set these value as go build -ldflags option
+
 	// Version is version number which automatically set on build. `git describe --tags`
+	// set these value as go build -ldflags option
 	Version string
 	// Revision is git commit hash which automatically set `git rev-parse --short HEAD` on build.
-	Revision  string
+	Revision string
+	// GoVersion stores the runtime version of Go
 	GoVersion = runtime.Version()
-	Compiler  = runtime.Compiler
+	// Compiler versions
+	Compiler = runtime.Compiler
 )
 
 // rootCmd represents the base command when called without any subcommands
