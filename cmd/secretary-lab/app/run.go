@@ -176,9 +176,14 @@ func postEvent(c *gin.Context) {
 
 func registerEvent(username, status string) error {
 
-	res, err := db.Exec("INSERT INTO lab_events (`username`, `event_type`) VALUES (?,?)", username, status)
-	log.Printf("[INFO] registerEvent query reseult: %s", res)
-	return err
+	alreadyCheckedIn, err := alreadyCheckinOrNot(username)
+	if !alreadyCheckedIn && err == nil {
+		res, err := db.Exec("INSERT INTO lab_events (`username`, `event_type`) VALUES (?,?)", username, status)
+		log.Printf("[INFO] registerEvent query result: %s", res)
+		return err
+	}
+	log.Printf("[INFO] registerEvent: User %s has already checked in today", username)
+	return nil
 }
 
 func alreadyCheckinOrNot(username string) (bool, error) {
